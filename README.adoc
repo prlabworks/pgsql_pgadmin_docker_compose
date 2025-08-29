@@ -1,0 +1,156 @@
+= Using PostgreSQL and pgAdmin 4 with Docker Engine on Ubuntu WSL2
+
+This guide explains how to use a PostgreSQL and pgAdmin 4 environment set up via `docker-compose.yml` on Ubuntu WSL2 with Docker Engine (not Docker Desktop), accessing services via `localhost` from Windows 11, and configuring the PostgreSQL connection in pgAdmin 4.
+
+== Prerequisites
+
+* Docker Engine installed in Ubuntu WSL2 (e.g., via `apt-get install docker.io` or official Docker repositories).
+* `docker-compose` installed in WSL2 (e.g., via `pip install docker-compose` or `apt-get install docker-compose`).
+* `docker-compose.yml` saved in a WSL2 directory (e.g., `~/project` or `/mnt/c/Users/YourUser/project` for Windows filesystem access).
+* Docker daemon running in WSL2 (e.g., `sudo service docker start`).
+
+== Starting the Environment
+
+. Open a WSL2 terminal (e.g., Ubuntu).
+. Navigate to the directory containing `docker-compose.yml`:
++
+[source,bash]
+----
+cd ~/project
+----
+. Start the services:
++
+[source,bash]
+----
+docker-compose up -d
+----
++
+This launches:
+* **PostgreSQL**: Accessible at `localhost:5432` from Windows (user: `admin`, password: `password`, database: `mydatabase`).
+* **pgAdmin 4**: Accessible at `http://localhost:8080` from Windows (email: `admin@admin.com`, password: `admin`).
++
+Data persists via `postgres_data` (PostgreSQL) and `pgadmin_data` (pgAdmin) volumes.
+
+== Accessing the Services
+
+* **PostgreSQL**:
+  - Connect from a Windows SQL client (e.g., DBeaver, TablePlus) using:
+    - Host: `localhost`
+    - Port: `5432`
+    - Database: `mydatabase`
+    - Username: `admin`
+    - Password: `password`
+  - In WSL2, connect via `psql`:
++
+[source,bash]
+----
+docker-compose exec postgres psql -U admin -d mydatabase
+----
+* **pgAdmin 4**:
+  - Open a Windows browser and navigate to `http://localhost:8080`.
+  - Log in with:
+    - Email: `admin@admin.com`
+    - Password: `admin`
+
+== Stopping the Services
+
+. In the WSL2 terminal, run:
++
+[source,bash]
+----
+docker-compose down
+----
++
+Stops and removes containers, preserving data in `postgres_data` and `pgadmin_data` volumes.
+. To delete all data (optional):
++
+[source,bash]
+----
+docker-compose down -v
+----
+
+== Setting Up PostgreSQL Connection in pgAdmin 4
+
+. **Log in to pgAdmin**:
+  - Open `http://localhost:8080` in a Windows browser.
+  - Log in with:
+    - Email: `admin@admin.com`
+    - Password: `admin`
+. **Register a Server**:
+  - In the left sidebar, right-click *Servers* > *Register* > *Server*.
+  - In the dialog:
+    - *General Tab*:
+      - Name: Enter a name (e.g., `MyPostgres`).
+    - *Connection Tab*:
+      - Host name/address: `postgres` (Docker Compose service name, resolvable in `pg-network`).
+      - Port: `5432`
+      - Maintenance database: `mydatabase`
+      - Username: `admin`
+      - Password: `password`
+      - Leave other fields as default.
+    - Click *Save*.
+. **Verify the Connection**:
+  - The server (`MyPostgres`) appears under *Servers*.
+  - Expand to view `mydatabase` and explore schemas (e.g., `public`), tables, or run queries.
+
+== Troubleshooting
+
+* **pgAdmin Connection Issues**:
+  - Verify the `postgres` container is running:
++
+[source,bash]
+----
+docker ps
+----
+  - If `postgres` host fails in pgAdmin, try the container’s IP:
++
+[source,bash]
+----
+docker inspect <postgres-container-name> | grep IPAddress
+----
++
+Use this IP (e.g., `172.17.0.x:5432`) in pgAdmin.
+  - Check Docker network:
++
+[source,bash]
+----
+docker network inspect pg-network
+----
++
+Ensure `postgres` and `pgadmin` are listed.
+* **WSL2 Networking**:
+  - If `localhost:8080` or `localhost:5432` is unreachable:
+    - Restart Docker: `sudo service docker restart`.
+    - Restart WSL2 from Windows Command Prompt: `wsl --shutdown`, then reopen the terminal.
+  - Check port conflicts in WSL2:
++
+[source,bash]
+----
+netstat -tuln | grep :8080
+netstat -tuln | grep :5432
+----
+  - If `localhost` stops working, find the WSL2 IP:
++
+[source,bash]
+----
+ip addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1
+----
++
+Use `http://<WSL2-IP>:8080` or `<WSL2-IP>:5432`.
+* **Data Persistence**:
+  - `postgres_data` and `pgadmin_data` volumes ensure data persists.
+  - Verify volumes:
++
+[source,bash]
+----
+docker volume ls
+----
+
+== Summary
+
+* **Run Environment**: Use `docker-compose up -d` in WSL2 to start PostgreSQL (`localhost:5432`) and pgAdmin (`http://localhost:8080`).
+* **Access**: Use `localhost` from Windows for pgAdmin (`http://localhost:8080`) and PostgreSQL (`localhost:5432`).
+* **pgAdmin Setup**: Register a server with host `postgres`, port `5432`, database `mydatabase`, user `admin`, password `password`.
+* **Data**: Persists via `postgres_data` and `pgadmin_data` volumes unless removed with `docker-compose down -v`.
+
+For specific issues (e.g., connection errors), share details for further assistance.
