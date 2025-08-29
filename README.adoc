@@ -152,5 +152,4 @@ docker volume ls
 * **Access**: Use `localhost` from Windows for pgAdmin (`http://localhost:8080`) and PostgreSQL (`localhost:5432`).
 * **pgAdmin Setup**: Register a server with host `postgres`, port `5432`, database `mydatabase`, user `admin`, password `password`.
 * **Data**: Persists via `postgres_data` and `pgadmin_data` volumes unless removed with `docker-compose down -v`.
-
-For specific issues (e.g., connection errors), share details for further assistance.
+* **Troubleshooting**: Check container status, network settings, and WSL2 IP if issues arise.
